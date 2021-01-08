@@ -241,17 +241,17 @@ class constrained(object):
         iters = 0
         inner_iters = 0
         lsiters = 0
-        print chck(x)
+        # print chck(x)
         #print P(x)
         while chck(x) > threshold:
-            print 'f(x) = ', f(x)#,'P(x) = ', P(x)
+            # print 'f(x) = ', f(x)#,'P(x) = ', P(x)
             sol = self.__unconstrained.fminunc(f,x,threshold)
-            print sol
+            # print sol
             x = sol['x']
-            print 'x',x
-            print 'f(x)',f(x)
+            # print 'x',x
+            # print 'f(x)',f(x)
             #print 'P(x)',P(x)
-            print 'chck',chck(x)
+            # print 'chck',chck(x)
             c *= beta
             if vectorized:
                 x_vec += [x]
@@ -263,7 +263,7 @@ class constrained(object):
             inner_iters += sol['iterations']
             lsiters += sol['ls_iterations']
         if vectorized:
-            print x_vec
+            # print x_vec
             return {'x':x_vec, 'f':[fun(x) for x in x_vec], 'c': c_vec, 'err' : err_vec, 'iterations':iters,'inner_iterations':inner_iters,'ls_iterations':lsiters}#, 'parameters' : params.copy()}
         else:
             return {'x':x, 'f':fun(x),'c':c,'iterations':iters,'inner_iterations':inner_iters,'ls_iterations':lsiters}#, 'parameters' : params.copy()}
