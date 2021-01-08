@@ -6,22 +6,22 @@ Created on Sat Jul 01 11:20:34 2017
 """
 from ..finitediff import jacobian as _jacobian, hessian as _hessian
 from ..linesearch import xstep as _xstep, backtracking as _backtracking, interp23 as _interp23, unimodality as _unimodality, golden_section as _golden_section
-from .. import np as _np
+from .. import xp as _xp
 from .. import scipy as _sp
 from ..nonlinear import unconstrained
 
 class constrained(object):
-    
+
     def __init__(self,parameters,unconstrained):
-        self.eps = _np.finfo(_np.float64).eps
-        self.resolution = _np.finfo(_np.float64).resolution
+        self.eps = _xp.finfo(_xp.float64).eps
+        self.resolution = _xp.finfo(_xp.float64).resolution
         self.params = parameters
         self.__unconstrained = unconstrained
         self._ls_algorithms = {'backtracking':_backtracking,
                     'interp23':_interp23,
                     'unimodality':_unimodality,
                     'golden-section':_golden_section}
-    
+
         self._con_algorithms = {'projected-gradient':self._proj_gradient
                         }
 
@@ -39,9 +39,9 @@ class constrained(object):
         else:
             pass
         Ak = A_[[i for i in I|K]]
-        #print('Ak') 
+        #print('Ak')
         #print(Ak)
-        P = _np.identity(len(x0),_np.float64)-Ak.T.dot(_np.linalg.inv(Ak.dot(Ak.T))).dot(Ak)
+        P = _xp.identity(len(x0),_xp.float64)-Ak.T.dot(_xp.linalg.inv(Ak.dot(Ak.T))).dot(Ak)
         d = -P.dot(g)
         #print('d', d)
         #print(' g', g)
@@ -50,26 +50,26 @@ class constrained(object):
                 #AkI = Ak#Ak[range(len(I)),:]
                 ##print AkI
                 ##print g
-                lambdas = -_np.linalg.inv((Ak.dot(Ak.T))).dot(Ak).dot(g)
+                lambdas = -_xp.linalg.inv((Ak.dot(Ak.T))).dot(Ak).dot(g)
                 #print 'lambdas', lambdas
                 lambdas = lambdas[range(len(I))]
-                if _np.min(lambdas) < 0.0: # check whether lagrange multipliers are less than 0 for any inequality constraint. If so, remove the constraint from the active set.
-                    #pos, = _np.where(lambdas<0.0)
-                    pos, = _np.where(lambdas==_np.min(lambdas))
+                if _xp.min(lambdas) < 0.0: # check whether lagrange multipliers are less than 0 for any inequality constraint. If so, remove the constraint from the active set.
+                    #pos, = _xp.where(lambdas<0.0)
+                    pos, = _xp.where(lambdas==_xp.min(lambdas))
                     js = [list(I)[i] for i in pos]
                     #print 0, I, J, K, pos
                     J |= set(js)
                     I ^= set(js)
                     #print 1, I, J, K
                     #print '### proj grad end in'
-                    return self._proj_gradient(fun,x0,d0,g0,Q0,A_,I,J,K,alpha=_np.inf)
+                    return self._proj_gradient(fun,x0,d0,g0,Q0,A_,I,J,K,alpha=_xp.inf) #xp.inf proxy for np.inf
                 else:
                     pass
             else:
                 pass
         #print '### proj grad end out'
         return d, g, []
-    
+
     def fmincon(self,fun,x0,A=[],b=[],Aeq=[],beq=[],threshold=1e-6,vectorized=False,**kwargs):
         '''
             Minimum Constrained Optimization
@@ -83,10 +83,10 @@ class constrained(object):
             ..**kwargs = initial_hessian : as matrix (default = identity)
             .. see unconstrained.params for further details on the methods that are being used
         '''
-        A = _np.array(A,_np.float64)
-        Aeq = _np.array(Aeq,_np.float64)
-        b = _np.array(b,_np.float64)
-        beq = _np.array(beq,_np.float64)
+        A = _xp.array(A,_xp.float64)
+        Aeq = _xp.array(Aeq,_xp.float64)
+        b = _xp.array(b,_xp.float64)
+        beq = _xp.array(beq,_xp.float64)
         if all([i==None for i in (A,Aeq,b,beq)]):
             raise Exception('For unconstrained problem, use optinpy.unconstrained.*')
         else:
@@ -97,46 +97,46 @@ class constrained(object):
         ### FIND FEASIBLE INITIAL POINT
         if len(Aeq) == 0:
             A_ = A
-            A_lp = _np.concatenate((A,_np.identity(_np.shape(A)[0])),axis=1)
+            A_lp = _xp.concatenate((A,_xp.identity(_xp.shape(A)[0])),axis=1)
             b_lp = b
             I0 = set(range(len(A)))
-            _ = _np.shape(A)[0]
+            _ = _xp.shape(A)[0]
             K = set([])
         elif len(A) == 0:
             A_ = Aeq
-            A_lp = _np.concatenate((Aeq,_np.zeros(_np.shape(Aeq)[0])),axis=1)
+            A_lp = _xp.concatenate((Aeq,_xp.zeros(_xp.shape(Aeq)[0])),axis=1)
             b_lp = beq
             I0 = set([])
-            _ = _np.shape(Aeq)[0]
+            _ = _xp.shape(Aeq)[0]
             K = set(range(_))
         else:
-            A_ = _np.concatenate((A,Aeq),axis=0)
-            A_lp = _np.concatenate((_np.concatenate((A,_np.identity(_np.shape(A)[0])),axis=1),\
-                                     _np.concatenate((Aeq,_np.zeros([_np.shape(Aeq)[0],_np.shape(A)[0]])),axis=1)),axis=0)
-            b_lp = _np.concatenate((b,beq))
+            A_ = _xp.concatenate((A,Aeq),axis=0)
+            A_lp = _xp.concatenate((_xp.concatenate((A,_xp.identity(_xp.shape(A)[0])),axis=1),\
+                                     _xp.concatenate((Aeq,_xp.zeros([_xp.shape(Aeq)[0],_xp.shape(A)[0]])),axis=1)),axis=0)
+            b_lp = _xp.concatenate((b,beq))
             I0 = set(range(len(A)))
-            _ = _np.shape(A)[0]
-            K = set(range(_np.shape(A)[0],_np.shape(A)[0]+_np.shape(Aeq)[0]))
+            _ = _xp.shape(A)[0]
+            K = set(range(_xp.shape(A)[0],_xp.shape(A)[0]+_xp.shape(Aeq)[0]))
         g = _jacobian(fun,x0,**self.params['jacobian'])
-        res = _sp.optimize.linprog(_np.concatenate((-g,_np.zeros(_))),A_ub=None,b_ub=None,A_eq=A_lp,b_eq=b_lp,options={'disp':True})
+        res = _sp.optimize.linprog(_xp.concatenate((-g,_xp.zeros(_))),A_ub=None,b_ub=None,A_eq=A_lp,b_eq=b_lp,options={'disp':True})
         if not res['success']:
             raise Exception('A feasible initial point could not be found.')
         else:
             pass
-        I = set(_np.where([_np.abs(i)<self.eps for i in res['x'][len(x0):len(x0)+_np.shape(A)[0]]])[0].tolist())
+        I = set(_xp.where([_xp.abs(i)<self.eps for i in res['x'][len(x0):len(x0)+_xp.shape(A)[0]]])[0].tolist())
         J = I0^I
         #print A_
         def amax(alpha,x0,d,A_,b,I,J,K):
             if len(J) == 0 and len(K) == 0 :
                 return alpha
             else:
-                alpha_ = (_np.array(b[list(J)])-_np.array(A_[list(J)]).dot(x0))*(_np.array(A_[list(J)]).dot(d))**-1.0
+                alpha_ = (_xp.array(b[list(J)])-_xp.array(A_[list(J)]).dot(x0))*(_xp.array(A_[list(J)]).dot(d))**-1.0
                 #print '### amax'
                 #print 'x :', x0
                 #print 'alphas Max_in:', alpha_
-                alpha_[_np.where(alpha_<= self.eps)[0]] = _np.inf
-                if _np.min(alpha_)-alpha < self.eps:
-                    pos, = _np.where(_np.abs(alpha_-_np.min(alpha_))<self.eps)
+                alpha_[_xp.where(alpha_<= self.eps)[0]] = _xp.inf #proxy for np.inf
+                if _xp.min(alpha_)-alpha < self.eps:
+                    pos, = _xp.where(_xp.abs(alpha_-_xp.min(alpha_))<self.eps)
                     js = [list(J)[i] for i in pos]
                     #print 2, I, J, K
                     #print js
@@ -144,15 +144,15 @@ class constrained(object):
                     I |= set(js)
                     #print 3, I, J, K
                     #print '### amax end clipped'
-                    return _np.min(alpha_)            
+                    return _xp.min(alpha_)
                 else:
                     #print '### amax end unclipped'
                     return alpha
         if res['success']:
-            x0 = _np.array(res['x'][0:len(x0)],_np.float64)
+            x0 = _xp.array(res['x'][0:len(x0)],_xp.float64)
             #print x0
             #print I, J
-            d, g, Q = self._con_algorithms[self.params['fmincon']['method']](fun,x0,[],[],[],A_,I,J,K,iters=0,alpha=_np.inf)
+            d, g, Q = self._con_algorithms[self.params['fmincon']['method']](fun,x0,[],[],[],A_,I,J,K,iters=0,alpha=_xp.inf)
             if kwargs.has_key('max_iter'):
                 max_iter = kwargs['max_iter']
             else:
@@ -166,13 +166,13 @@ class constrained(object):
             #print '\n'
             iters = 0
             lsiters = 0
-            alpha = _np.inf
-            while _np.dot(d,d) > threshold and iters < max_iter:
+            alpha = _xp.inf
+            while _xp.dot(d,d) > threshold and iters < max_iter:
                 ls = alg(fun,x,d,**ls_kwargs)
                 #print '\n####ITERATION {}\n'.format(iters)
                 #print 'd: ',d
                 #print 'x0: ',x
-                #print 'Ax0:',_np.dot(A_,x)
+                #print 'Ax0:',_xp.dot(A_,x)
                 #print 'Sets: ', I, J, K
                 alpha = ls['alpha']
                 #print 'alpha Inicial', alpha
@@ -181,17 +181,17 @@ class constrained(object):
                 lsiters += ls['iterations']
                 #Q = _hessian(fun,x0,**params['hessian'])
                 #alpha = g.T.dot(g)/(g.T.dot(Q).dot(g))
-                x = _xstep(x,d,alpha)            
+                x = _xstep(x,d,alpha)
                 #print 'x1: ',x
-                #print 'Ax1:',_np.dot(A_,x), 'IJK 1', I, J, K
+                #print 'Ax1:',_xp.dot(A_,x), 'IJK 1', I, J, K
                 if vectorized:
                     x_vec += [x]
                 else:
                     pass
                 d, g, _ =self. _con_algorithms[self.params['fmincon']['method']](fun,x,d,g,Q,A_,I,J,K,iters=iters,alpha=alpha)
                 if len(I|K) > 0:
-                    _A = _np.array([A_[i] for i in I|K],_np.float64)
-                    #print 'lambdas',-_np.linalg.inv((_A.dot(_A.T))).dot(_A).dot(g)
+                    _A = _xp.array([A_[i] for i in I|K],_xp.float64)
+                    #print 'lambdas',-_xp.linalg.inv((_A.dot(_A.T))).dot(_A).dot(g)
                 iters += 1
                 #print 'Sets finais: ', I, J, K
                 #print '\n'
@@ -203,7 +203,7 @@ class constrained(object):
                 return {'x':x, 'f':fun(x), 'iterations':iters, 'ls_iterations':lsiters}#, 'parameters' : params.copy()}
         else:
             raise Exception('Could not determine an initial feasible point.')
-            
+
     def fminnlcon(self,fun,x0,g,c,beta,threshold=1e-6,vectorized=False,**kwargs):
         '''
             Minimum (Non Linearly) Constrained Optimization
@@ -218,17 +218,17 @@ class constrained(object):
             .. see unconstrained.params for further details on the methods that are being used
         '''
         if self.params['fminnlcon']['method'] == 'penalty':
-            P = lambda x : _np.sum([_np.max([0.,_(x)]) for _  in g])
+            P = lambda x : _xp.sum([_xp.max([0.,_(x)]) for _  in g])
             f = lambda x : fun(x)+c*P(x)
             chck = lambda x : c*P(x)
         elif self.params['fminnlcon']['method'] == 'log-barrier':
-            B = lambda x : -_np.sum([_np.log(-_(x)) for _ in g]) # g(x) <= 0
+            B = lambda x : -_xp.sum([_xp.log(-_(x)) for _ in g]) # g(x) <= 0
             f = lambda x : fun(x)+(1./c)*B(x)
             chck = lambda x : (1./c)*B(x)
         elif self.params['fminnlcon']['method'] == 'barrier':
-            B = lambda x : -_np.sum([1./_(x) for _ in g]) # g(x) <= 0
+            B = lambda x : -_xp.sum([1./_(x) for _ in g]) # g(x) <= 0
             f = lambda x : fun(x)+(1./c)*B(x)
-            chck = lambda x : (1./c)*B(x)   
+            chck = lambda x : (1./c)*B(x)
         else:
             raise Exception('The fminnlcon method ({}) has not been identified.'.format(self.params['fminnlcon']['method']))
         x = x0
@@ -267,8 +267,3 @@ class constrained(object):
             return {'x':x_vec, 'f':[fun(x) for x in x_vec], 'c': c_vec, 'err' : err_vec, 'iterations':iters,'inner_iterations':inner_iters,'ls_iterations':lsiters}#, 'parameters' : params.copy()}
         else:
             return {'x':x, 'f':fun(x),'c':c,'iterations':iters,'inner_iterations':inner_iters,'ls_iterations':lsiters}#, 'parameters' : params.copy()}
-        
-        
-        
-        
-        
