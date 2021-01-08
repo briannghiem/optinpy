@@ -11,8 +11,8 @@ packages = [
     		'optinpy.mcfp',
     		'optinpy.mst',
     		'optinpy.nonlinear',
-		# 'optinpy.nonlinear.constrained',
-		# 'optinpy.nonlinear.unconstrained',
+		# 'optinpy.nonlinear.constrained', #causing installation issue: can't be found during setuptools.setup
+		# 'optinpy.nonlinear.unconstrained', #caussing installation issue: can't be found during setuptools.setup
    		'optinpy.simplex',
     		'optinpy.sp',
 ]
