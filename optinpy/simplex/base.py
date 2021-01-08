@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division, absolute_import, print_function
 
-from . import np
+from . import xp
 
 def argparser(x,vartype,**kwargs):
     if isinstance(x,vartype):
@@ -22,9 +22,9 @@ def argparser(x,vartype,**kwargs):
         return x
     else:
         raise TypeError('variable type mismatch.')
-        
+
 class simplex(object):
-        
+
     def __init__(self,A,b,c,mode='min',**kwargs):
         """
             This is a standad class for tableau (minimization as standard)
@@ -32,20 +32,20 @@ class simplex(object):
             c is a vector of size m
             b is a vecotr of size n
             mode as string 'min' or 'max'
-            
+
             simplex minimizes or maximizes c'x s.t. Ax<=b
             therefore, A and b must be set in such fashion.
         """
-        self.A = argparser(A,(np.ndarray,list,tuple))
+        self.A = argparser(A,(xp.ndarray,list,tuple))
         self.n = len(A)
         ms = [len(A[i]) for i in range(0,len(A))]
         if max(sorted(ms)) == min(sorted(ms)):
             self.m = len(A[0])
         else:
             raise Exception('A must be a matrix. i.e. all rows must have the same length.')
-        self.c = argparser(c,(np.ndarray,list,tuple),varsize=self.m)
-        self.b = argparser(b,(np.ndarray,list,tuple),varsize=self.n)
-        
+        self.c = argparser(c,(xp.ndarray,list,tuple),varsize=self.m)
+        self.b = argparser(b,(xp.ndarray,list,tuple),varsize=self.n)
+
         # MODE MIN MAX
         if mode == 'min':
             self.z = 1
@@ -54,7 +54,7 @@ class simplex(object):
             self.c *= self.z
         else:
             raise Exception("mode ({}) must be either 'max' or 'min'".format(mode))
-        
+
         # In case LB and/or UB are definded
         if kwargs.has_key('ub') and argparser(kwargs['ub'],(list,tuple),varsize=self.m,subvartype=(int,long,float)):
             self.ub = kwargs['ub']+[float('inf') for i in range(0,self.n)]
@@ -66,11 +66,11 @@ class simplex(object):
             self.lb = [0.0 for i in range(0,self.m+self.n)]
         self.delta = [self.ub[l]-self.lb[l] for l in range(0,self.m+self.n)]
         self.b = [self.b[l] - sum([self.A[l][k]*self.lb[k] for k in range(0,self.m)]) for l in range(0,self.n)]
-        
+
         # Def basic and non basic
         self.non_basic = range(0,self.m)
-        self.basic = range(self.m,self.n+self.m)               
-        
+        self.basic = range(self.m,self.n+self.m)
+
         # Standardize
         self.delta_x = [0 for i in range(0,self.m)]+self.b
         self.pivot_matrix = [[1.0 if i == j else 0.0 for i in range(0,self.n+1)] for j in range (0,self.n+1)]
@@ -95,7 +95,7 @@ class simplex(object):
         self.non_basic[self.non_basic.index(j)] = self.basic[i]
         self.basic[i] = j
         return self.pivot_matrix
-        
+
     def primal(self):
         if any([self.c[k] > 0 and self.delta_x[k] == self.delta[k] or self.c[k] < 0 and self.delta_x[k] == 0 for k in self.non_basic]):
             c_s = filter(lambda x : x != None, [c_ if c_[0]/c_[1]<0 else None for c_ in \
@@ -103,7 +103,7 @@ class simplex(object):
             # steepest descent
             if min(c_s)[0] < 0:
                 c = min(c_s)
-                j = c[2] # argmin(c)               
+                j = c[2] # argmin(c)
             else:
                 c = max(c_s)
                 j = c[2]
@@ -124,20 +124,20 @@ class simplex(object):
                 self.delta_x[self.basic[l]] -= self.A[l][j]*epsilon[0]
             self.delta_x[j] += epsilon[0]
             if epsilon[0] != epsilon_max:
-                i = epsilon[1]               
+                i = epsilon[1]
                 self.pivot(i,j)
             else:
                 pass
         else:
             pass
-        
+
     def dual(self):
-        if any([b_<0 for b_ in self.b]):            
+        if any([b_<0 for b_ in self.b]):
             b_s = filter(lambda x : x != None, [b_ if b_[0]<0 else None for b_ in zip(self.b,range(0,self.n))])
             while len(b_s)>0:
                 i = min(b_s)[1]
                 ratio = [-self.c[k]/self.A[i][k] if self.c[k]>0 and self.A[i][k]<0 else float('inf') for k in range(0,self.n+self.m)]
-                if min(ratio)<np.float('inf'):                
+                if min(ratio)<xp.float('inf'):
                     j = list.index(ratio,min(ratio)) # argmin(c)
                     self.delta_x[j] = self.b[i]/self.A[i][j]
                     self.delta_x[self.basic[i]] = 0.0
@@ -146,8 +146,4 @@ class simplex(object):
                 else:
                     b_s.pop(0)
         else:
-            pass            
-        
-        
-    
-        
+            pass
