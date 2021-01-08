@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division, absolute_import, print_function
-from .. import np as __np
-eps = __np.finfo(__np.float64).eps
-resolution = __np.finfo(__np.float64).resolution
+from .. import xp as __xp
+eps = __xp.finfo(__xp.float64).eps
+resolution = __xp.finfo(__xp.float64).resolution
 
-def jacobian(fun,x0,epsilon=__np.sqrt(eps),algorithm='central'):
+def jacobian(fun,x0,epsilon=__xp.sqrt(eps),algorithm='central'):
     '''
         Jacobian calculator
         ..fun as callable object; must be a function of x0 and return a single number
@@ -21,7 +21,7 @@ def jacobian(fun,x0,epsilon=__np.sqrt(eps),algorithm='central'):
     elif algorithm == 'backward':
         evpoints = [-1,0]
     else:
-        raise Exception("Algorithm must be either 'central', 'forward' or 'backward'.")    
+        raise Exception("Algorithm must be either 'central', 'forward' or 'backward'.")
     for i in range(len(x0)):
         fvals = []
         for _x in evpoints:
@@ -29,9 +29,9 @@ def jacobian(fun,x0,epsilon=__np.sqrt(eps),algorithm='central'):
             fvals += [fun(x0)]
             x0[i] -= _x*epsilon
         grad += [(fvals[1]-fvals[0])/((evpoints[1]-evpoints[0])*epsilon)]
-    return __np.array(grad,__np.float64).copy()
+    return __xp.array(grad,__xp.float64).copy()
 
-def hessian(fun,x0,epsilon=__np.sqrt(eps),algorithm='central',**kwargs):
+def hessian(fun,x0,epsilon=__xp.sqrt(eps),algorithm='central',**kwargs):
     '''
         hessian calculator
         ..fun as callable object; must be a function of x0 and return a single number
@@ -62,7 +62,7 @@ def hessian(fun,x0,epsilon=__np.sqrt(eps),algorithm='central',**kwargs):
         denom_ij = epsilon**2
         denom_ii = denom_ij
     else:
-        raise Exception("Algorithm must be either 'central', 'forward' or 'backward'.")    
+        raise Exception("Algorithm must be either 'central', 'forward' or 'backward'.")
     for i in range(0,len(x0)):
         fvals = []
         for points in evpoints_ii:
@@ -82,4 +82,4 @@ def hessian(fun,x0,epsilon=__np.sqrt(eps),algorithm='central',**kwargs):
                 x0[j] -= points[1]*epsilon
             hessian[i][j] = sum([fvals[k]*coeffs_ij[k] for k in range(len(fvals))])/denom_ij
             hessian[j][i] = hessian[i][j]
-    return __np.array(hessian)
+    return __xp.array(hessian)
