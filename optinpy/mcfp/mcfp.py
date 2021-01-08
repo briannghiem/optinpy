@@ -7,13 +7,13 @@ def bigm(network,mcost,verbose=False):
         .. network as  graph object
         .. mcost as numeric, the input cost of artificial arcs.
     """
-    network.set_root_weight(mcost)         
-    
+    network.set_root_weight(mcost)
+
     while True:
         non_basic = [arc for arc in network.non_basic]
         i = 1
         while len(non_basic)>0:
-            print            
+            # print
             i += 1
             arc = non_basic.pop(0)
             if arc.c_hat() <= 0:
@@ -26,4 +26,3 @@ def bigm(network,mcost,verbose=False):
             return(network)
         else:
             pass
-        
