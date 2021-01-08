@@ -14,7 +14,10 @@ Oct, 2015
     :license: GPU, see LICENSE for more details.
 """
 
-import numpy as np
+try: #device agnostic implementation
+    import cupy as xp
+except:
+    import numpy as xp
 import time
 import scipy
 from .graph import *
@@ -27,4 +30,4 @@ from .linesearch import linesearch
 from .nonlinear import unconstrained as __unconstrained
 from .nonlinear import constrained as __constrained
 
-__all__ = ['np','graph','__author__','__version__']
+__all__ = ['xp','graph','__author__','__version__']
