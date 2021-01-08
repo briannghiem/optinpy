@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division, absolute_import, print_function
-from .. import np as __np
+from .. import xp as __xp
 from ..finitediff import jacobian as __jacobian, hessian as __hessian
 
-eps = __np.finfo(__np.float64).eps
+eps = __xp.finfo(__xp.float64).eps
 
 def xstep(x0,d,alpha):
     '''
         returns x_1 given x_0, d and alpha
     '''
-    return __np.array(x0,__np.float64)+alpha*__np.array(d,__np.float64)
+    return __xp.array(x0,__xp.float64)+alpha*__xp.array(d,__xp.float64)
 
 def __armijo(fun,x0,d,dd,alpha,c):
     '''
@@ -32,10 +32,10 @@ def backtracking(fun,x0,d=None,alpha=1,rho=0.6,c=1e-4,max_iter=1e3,**kwargs):
     '''
     if any(d):
         pass
-        dd = __np.dot(d,__jacobian(fun,x0,**kwargs))     
+        dd = __xp.dot(d,__jacobian(fun,x0,**kwargs))
     else:
-        d = -__np.array(__jacobian(fun,x0,**kwargs),__np.float64) # steepest descent step
-        dd = __np.dot(d,-d) 
+        d = -__xp.array(__jacobian(fun,x0,**kwargs),__xp.float64) # steepest descent step
+        dd = __xp.dot(d,-d)
     iters = 0
     while not __armijo(fun,x0,d,dd,alpha,c) and iters < max_iter:# Armijo's Condition
         alpha = rho*alpha
@@ -56,10 +56,10 @@ def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,**k
     alpha0 = alpha
     f0 = fun(x0)
     if any(d):
-        dd = __np.dot(d,__jacobian(fun,x0,**kwargs))     
+        dd = __xp.dot(d,__jacobian(fun,x0,**kwargs))
     else:
-        d = -__np.array(__jacobian(fun,x0,**kwargs),__np.float64) # steepest descent step
-        dd = __np.dot(d,-d)
+        d = -__xp.array(__jacobian(fun,x0,**kwargs),__xp.float64) # steepest descent step
+        dd = __xp.dot(d,-d)
     iters = {'first_order':0,'second_order':0,'third_order':0}
     iters['first_order'] += 1
     if __armijo(fun,x0,d,dd,alpha0,c):
@@ -81,11 +81,11 @@ def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,**k
                     coeff = (1/(alpha0**2*alpha1**2*(alpha1-alpha0)))
                     m = [[alpha0**2,-alpha1**2],[-alpha0**3,alpha1**3]]
                     v = [fun(xstep(x0,d,alpha1))-f0-alpha1*dd,fun(xstep(x0,d,alpha0))-f0-alpha0*dd]
-                    a, b = coeff*__np.dot(m,v)
+                    a, b = coeff*__xp.dot(m,v)
                     alpha0 = alpha1
                     alpha1 = (-b+(b**2.-3.*a*dd)**0.5)/(3.*a)
             return {'x':xstep(x0,d,alpha1), 'f':fun(xstep(x0,d,alpha1)), 'alpha':alpha1, 'iterations':sum(iters.values()), 'inner_iterations':iters}
-        
+
 def unimodality(fun,x0,d=None,b=1,threshold=0.01,max_iter=1e3,**kwargs):
     '''
         unimodality algorithm, arg_min(alpha) fun(x0+alpha*d)
@@ -99,11 +99,11 @@ def unimodality(fun,x0,d=None,b=1,threshold=0.01,max_iter=1e3,**kwargs):
     if any(d):
         pass
     else:
-        d = -__np.array(__jacobian(fun,x0,**kwargs),__np.float64) # steepest descent step
+        d = -__xp.array(__jacobian(fun,x0,**kwargs),__xp.float64) # steepest descent step
     iters = 0
     while 2*abs((interv[-1]-interv[0])/(abs(interv[-1])+abs(interv[0]))) > threshold and iters < max_iter:
         iters += 1
-        x = __np.sort(__np.random.uniform(*interv+[2])) # evaluate alpha and beta uniformily distributed in the interv
+        x = __xp.sort(__xp.random.uniform(*interv+[2])) # evaluate alpha and beta uniformily distributed in the interv
         phi = [fun(xstep(x0,d,x_)) for x_ in x]
         if phi[0] > phi[1]:
             interv[0] = x[0]
@@ -111,7 +111,7 @@ def unimodality(fun,x0,d=None,b=1,threshold=0.01,max_iter=1e3,**kwargs):
             interv[1] = x[1]
     alpha = (interv[1]+interv[0])/2.0
     return {'x':xstep(x0,d,alpha), 'f':fun(xstep(x0,d,alpha)), 'alpha':alpha, 'iterations':iters}
-                    
+
 def golden_section(fun,x0,d=None,b=1,threshold=0.01,max_iter=1e3,**kwargs):
     '''
         golden-section algorithm, arg_min(alpha) fun(x0+alpha*d)
@@ -124,12 +124,12 @@ def golden_section(fun,x0,d=None,b=1,threshold=0.01,max_iter=1e3,**kwargs):
     if any(d):
         pass
     else:
-        d = -__np.array(__jacobian(fun,x0,**kwargs),__np.float64) # steepest descent step
+        d = -__xp.array(__jacobian(fun,x0,**kwargs),__xp.float64) # steepest descent step
     r = (5**.5-1)/2.0
     interv = [0,b]
     alpha = interv[0] + (1-r)*b
     beta = interv[0] + r*b
-    phi = [fun(xstep(x0,d,x_)) for x_ in [alpha,beta]]     
+    phi = [fun(xstep(x0,d,x_)) for x_ in [alpha,beta]]
     iters = 0
     while 2*abs((interv[-1]-interv[0])/(abs(interv[-1])+abs(interv[0]))) > threshold  and iters < max_iter:
         iters += 1
@@ -147,9 +147,3 @@ def golden_section(fun,x0,d=None,b=1,threshold=0.01,max_iter=1e3,**kwargs):
             phi[0] = fun(xstep(x0,d,alpha))
     alpha = (interv[1]+interv[0])/2.0
     return {'x':xstep(x0,d,alpha), 'f':fun(xstep(x0,d,alpha)), 'alpha':alpha, 'iterations':iters}
-            
-    
-    
-    
-    
-        
