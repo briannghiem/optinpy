@@ -55,7 +55,7 @@ class unconstrained(object):
         eigs, nu = _xp.linalg.eig(Q)
         eigs = abs(eigs)
         eigs[eigs<self.params['fminunc']['params']['modified-newton']['sigma']] = self.params['fminunc']['params']['modified-newton']['sigma']
-        d = _sl.linalg.cho_solve(_sl.linalg.cho_factor(nu.dot(_xp.diag(eigs)).dot(nu.T)),-g)
+        d = _sl.cho_solve(_sl.cho_factor(nu.dot(_xp.diag(eigs)).dot(nu.T)),-g)
         return d, g, Q
 
     def _conj_gradient(self,fun,x0,d0,g0,Q0,*args,**kwargs):
