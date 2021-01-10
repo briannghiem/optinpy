@@ -5,14 +5,14 @@ from . import xp
 
 def argparser(x,vartype,**kwargs):
     if isinstance(x,vartype):
-        if kwargs.has_key('varsize'):
+        if 'varsize' in kwargs:
             if len(x) == kwargs['varsize']:
                 pass
             else:
                 raise IndexError('Size mismatch.')
         else:
             pass
-        if kwargs.has_key('subvartype') and not isinstance(x,kwargs['subvartype']):
+        if 'subvartype' in kwargs and not isinstance(x,kwargs['subvartype']):
             if all([isinstance(i,kwargs['subvartype']) for i in x]):
                 pass
             else:
@@ -56,11 +56,11 @@ class simplex(object):
             raise Exception("mode ({}) must be either 'max' or 'min'".format(mode))
 
         # In case LB and/or UB are definded
-        if kwargs.has_key('ub') and argparser(kwargs['ub'],(list,tuple),varsize=self.m,subvartype=(int,long,float)):
+        if 'ub' in kwargs and argparser(kwargs['ub'],(list,tuple),varsize=self.m,subvartype=(int,long,float)):
             self.ub = kwargs['ub']+[float('inf') for i in range(0,self.n)]
         else:
             self.ub = [float('inf') for i in range(0,self.m+self.n)]
-        if kwargs.has_key('lb') and argparser(kwargs['lb'],(list,tuple),varsize=self.m,subvartype=(int,long,float)):
+        if 'lb' in kwargs and argparser(kwargs['lb'],(list,tuple),varsize=self.m,subvartype=(int,long,float)):
             self.lb = kwargs['lb']+[0.0 for i in range(0,self.n)]
         else:
             self.lb = [0.0 for i in range(0,self.m+self.n)]
