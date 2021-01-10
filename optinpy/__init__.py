@@ -19,7 +19,8 @@ try: #device agnostic implementation
 except:
     import numpy as xp
 import time
-import scipy
+import scipy.optimize as so
+import scipy.linalg as sl
 from .graph import *
 from .simplex import *
 from .mcfp import mcfp
