@@ -31,6 +31,7 @@ class unconstrained(object):
             ..fun as callable object; must be a function of x0 and return a single number
             ..x0 as a numeric array; point from which to start
         '''
+        x0 = _xp.array(x0) #ensure proper cast
         g = _jacobian(fun,x0,**self.params['jacobian'])
         return -g, g, []
 
@@ -40,6 +41,7 @@ class unconstrained(object):
             ..fun as callable object; must be a function of x0 and return a single number
             ..x0 as a numeric array; point from which to start
         '''
+        x0 = _xp.array(x0) #ensure proper cast
         g = _jacobian(fun,x0,**self.params['jacobian'])
         Q = _hessian(fun,x0,**self.params['hessian'])
         return -_xp.linalg.inv(Q).dot(g), g, Q
@@ -50,12 +52,13 @@ class unconstrained(object):
             ..fun as callable object; must be a function of x0 and return a single number
             ..x0 as a numeric array; point from which to start
         '''
+        x0 = _xp.array(x0) #ensure proper cast
         g = _jacobian(fun,x0,**self.params['jacobian'])
         Q = _hessian(fun,x0,**self.params['hessian'])
         eigs, nu = _xp.linalg.eig(Q)
         eigs = abs(eigs)
         eigs[eigs<self.params['fminunc']['params']['modified-newton']['sigma']] = self.params['fminunc']['params']['modified-newton']['sigma']
-        d = _sl.cho_solve(_sl.cho_factor(nu.dot(_xp.diag(eigs)).dot(nu.T)),-g)
+        d = _xp.array(_sl.cho_solve(_sl.cho_factor(nu.dot(_xp.diag(_xp.array(eigs))).dot(nu.T)),-g))
         return d, g, Q
 
     def _conj_gradient(self,fun,x0,d0,g0,Q0,*args,**kwargs):
@@ -64,6 +67,8 @@ class unconstrained(object):
             ..fun as callable object; must be a function of x0 and return a single number
             ..x0 as a numeric array; point from which to start
         '''
+        x0 = _xp.array(x0) #ensure proper cast
+        d0 = _xp.array(d0)
         g = _jacobian(fun,x0,**self.params['jacobian'])
         Q = _hessian(fun,x0,**self.params['hessian'])
         if sum(abs(d0)) < self.eps or ((kwargs['iters'] + 1) % len(x0)) < self.eps:
@@ -79,6 +84,9 @@ class unconstrained(object):
             ..fun as callable object; must be a function of x0 and return a single number
             ..x0 as a numeric array; point from which to start
         '''
+        x0 = _xp.array(x0) #ensure proper cast
+        g0 = _xp.array(g0)
+        d0 = _xp.array(d0)
         g = _jacobian(fun,x0,**self.params['jacobian'])
         if sum(abs(d0)) < self.eps or ((kwargs['iters'] + 1) % len(x0)) < self.eps:
             return -g, g, []
@@ -93,12 +101,16 @@ class unconstrained(object):
             ..fun as callable object; must be a function of x0 and return a single number
             ..x0 as a numeric array; point from which to start
         '''
+        x0 = _xp.array(x0) #ensure proper cast
+        g0 = _xp.array(g0)
+        d0 = _xp.array(d0)
+        Q0 = _xp.array(Q0)
         g = _jacobian(fun,x0,**self.params['jacobian'])
         if sum(abs(d0)) < self.eps or ((kwargs['iters'] + 1) % len(x0)) < self.eps:
-            Q = [self.params['hessian']['initial'] if self.params['hessian']['initial'] else _xp.identity(len(x0))][0]
+            Q = _xp.array([self.params['hessian']['initial'] if self.params['hessian']['initial'] else _xp.identity(len(x0))][0])
         else:
-            q = (g-g0)[_xp.newaxis].T
-            p = (kwargs['alpha']*d0)[_xp.newaxis].T
+            q = (g-g0)[_xp.newaxis].T; q = _xp.array(q)
+            p = (kwargs['alpha']*d0)[_xp.newaxis].T; p = _xp.array(p)
             Q = Q0 + _xp.dot(p,p.T)/_xp.dot(p.T,q) - ( _xp.dot(Q0,q).dot(_xp.dot(q.T,Q0)))/(_xp.dot(q.T,Q0).dot(q))
         d = -Q.dot(g)
         return d, g, Q
@@ -109,12 +121,16 @@ class unconstrained(object):
             ..fun as callable object; must be a function of x0 and return a single number
             ..x0 as a numeric array; point from which to start
         '''
+        x0 = _xp.array(x0) #ensure proper cast
+        g0 = _xp.array(g0)
+        d0 = _xp.array(d0)
+        Q0 = _xp.array(Q0)
         g = _jacobian(fun,x0,**self.params['jacobian'])
         if sum(abs(d0)) < self.eps or ((kwargs['iters'] + 1) % len(x0)) < self.eps:
-            Q = [self.params['hessian']['initial'] if self.params['hessian']['initial'] else _xp.identity(len(x0))][0]
+            Q = _xp.array([self.params['hessian']['initial'] if self.params['hessian']['initial'] else _xp.identity(len(x0))][0])
         else:
             q = (g-g0)[_xp.newaxis].T
-            p = (kwargs['alpha']*d0)[_xp.newaxis].T
+            p = _xp.array((kwargs['alpha']*d0)[_xp.newaxis].T)
             Q = Q0 + (1.0 + q.T.dot(Q0).dot(q)/(q.T.dot(p)))*(p.dot(p.T))/(p.T.dot(q)) - (p.dot(q.T).dot(Q0)+Q0.dot(q).dot(p.T))/(q.T.dot(p))
         d = -Q.dot(g)
         return d, g, Q
@@ -125,6 +141,10 @@ class unconstrained(object):
             ..fun as callable object; must be a function of x0 and return a single number
             ..x0 as a numeric array; point from which to start
         '''
+        x0 = _xp.array(x0) #ensure proper cast
+        g0 = _xp.array(g0)
+        d0 = _xp.array(d0)
+        Q0 = _xp.array(Q0)
         if self.params['fminunc']['params']['quasi-newton']['hessian_update'] in ('davidon-fletcher-powell','dfp'):
             return self.dfp(fun,x0,d0,g0,Q0,*args,**kwargs)
         elif self.params['fminunc']['params']['quasi-newton']['hessian_update'] in ('broyden-fletcher-goldfarb-shanno','BFGS','bfgs'):
@@ -152,7 +172,7 @@ class unconstrained(object):
             x_vec = [x0]
         else:
             pass
-        x = x0
+        x = _xp.array(x0)
         iters = 0
         lsiters = 0
         while _xp.dot(g,g) > threshold and iters < max_iter:
