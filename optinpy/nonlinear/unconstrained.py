@@ -4,7 +4,7 @@
 from ..finitediff import jacobian as _jacobian, hessian as _hessian
 from ..linesearch import xstep as _xstep, backtracking as _backtracking, interp23 as _interp23, unimodality as _unimodality, golden_section as _golden_section
 from .. import xp as _xp
-from .. import scipy as _sp
+from .. import sl as _sl
 
 
 class unconstrained(object):
@@ -55,7 +55,7 @@ class unconstrained(object):
         eigs, nu = _xp.linalg.eig(Q)
         eigs = abs(eigs)
         eigs[eigs<self.params['fminunc']['params']['modified-newton']['sigma']] = self.params['fminunc']['params']['modified-newton']['sigma']
-        d = _sp.linalg.cho_solve(_sp.linalg.cho_factor(nu.dot(_xp.diag(eigs)).dot(nu.T)),-g)
+        d = _sl.linalg.cho_solve(_sl.linalg.cho_factor(nu.dot(_xp.diag(eigs)).dot(nu.T)),-g)
         return d, g, Q
 
     def _conj_gradient(self,fun,x0,d0,g0,Q0,*args,**kwargs):
