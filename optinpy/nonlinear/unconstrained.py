@@ -144,7 +144,7 @@ class unconstrained(object):
         alg = self._ls_algorithms[self.params['linesearch']['method']]
         ls_kwargs = self.params['linesearch']['params'][self.params['linesearch']['method']]
         d, g, Q = self._unc_algorithms[self.params['fminunc']['method']](fun,x0,_xp.zeros(len(x0)),[],[],iters=0)
-        if kwargs.has_key('max_iter'):
+        if 'max_iter' in kwargs:
             max_iter= kwargs['max_iter']
         else:
             max_iter = self.params['fminunc']['params'][self.params['fminunc']['method']]['max_iter']
