@@ -7,7 +7,7 @@ Created on Sat Jul 01 11:20:34 2017
 from ..finitediff import jacobian as _jacobian, hessian as _hessian
 from ..linesearch import xstep as _xstep, backtracking as _backtracking, interp23 as _interp23, unimodality as _unimodality, golden_section as _golden_section
 from .. import xp as _xp
-from .. import scipy as _sp
+from .. import so as _so
 from ..nonlinear import unconstrained
 
 class constrained(object):
@@ -118,7 +118,7 @@ class constrained(object):
             _ = _xp.shape(A)[0]
             K = set(range(_xp.shape(A)[0],_xp.shape(A)[0]+_xp.shape(Aeq)[0]))
         g = _jacobian(fun,x0,**self.params['jacobian'])
-        res = _sp.optimize.linprog(_xp.concatenate((-g,_xp.zeros(_))),A_ub=None,b_ub=None,A_eq=A_lp,b_eq=b_lp,options={'disp':True})
+        res = _so.optimize.linprog(_xp.concatenate((-g,_xp.zeros(_))),A_ub=None,b_ub=None,A_eq=A_lp,b_eq=b_lp,options={'disp':True})
         if not res['success']:
             raise Exception('A feasible initial point could not be found.')
         else:
