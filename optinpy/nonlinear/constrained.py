@@ -153,7 +153,7 @@ class constrained(object):
             #print x0
             #print I, J
             d, g, Q = self._con_algorithms[self.params['fmincon']['method']](fun,x0,[],[],[],A_,I,J,K,iters=0,alpha=_xp.inf)
-            if kwargs.has_key('max_iter'):
+            if 'max_iter' in kwargs:
                 max_iter = kwargs['max_iter']
             else:
                 max_iter = self.params['fmincon']['params'][self.params['fmincon']['method']]['max_iter']
