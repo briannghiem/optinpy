@@ -30,6 +30,7 @@ def backtracking(fun,x0,d=None,alpha=1,rho=0.6,c=1e-4,max_iter=1e3,**kwargs):
         ..c as a numeric values; constant of Wolfe's condition
         ..**kwargs as a dictionary with the jacobian function parameters
     '''
+    d = __xp.array(d) #ensure proper cast
     if any(d):
         pass
         dd = __xp.dot(d,__jacobian(fun,x0,**kwargs))
@@ -79,8 +80,8 @@ def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,**k
                 while not __armijo(fun,x0,d,dd,alpha1,c) and iters['third_order'] < max_iter:
                     iters['third_order'] += 1
                     coeff = (1/(alpha0**2*alpha1**2*(alpha1-alpha0)))
-                    m = [[alpha0**2,-alpha1**2],[-alpha0**3,alpha1**3]]
-                    v = [fun(xstep(x0,d,alpha1))-f0-alpha1*dd,fun(xstep(x0,d,alpha0))-f0-alpha0*dd]
+                    m = __xp.array([[alpha0**2,-alpha1**2],[-alpha0**3,alpha1**3]])
+                    v = __xp.array([fun(xstep(x0,d,alpha1))-f0-alpha1*dd,fun(xstep(x0,d,alpha0))-f0-alpha0*dd])
                     a, b = coeff*__xp.dot(m,v)
                     alpha0 = alpha1
                     alpha1 = (-b+(b**2.-3.*a*dd)**0.5)/(3.*a)
@@ -95,7 +96,7 @@ def unimodality(fun,x0,d=None,b=1,threshold=0.01,max_iter=1e3,**kwargs):
         ..b as the upper bound for the interval
         ..threshold min mean-relative difference between interval bounds as of which the procedeure ceases flowing
     '''
-    interv = [0,b]
+    interv = __xp.array([0,b])
     if any(d):
         pass
     else:
