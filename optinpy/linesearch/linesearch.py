@@ -83,8 +83,8 @@ def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,**k
                     m = __xp.array([[alpha0**2,-alpha1**2],[-alpha0**3,alpha1**3]])
                     v = __xp.array([fun(xstep(x0,d,alpha1))-f0-alpha1*dd,fun(xstep(x0,d,alpha0))-f0-alpha0*dd])
                     a, b = coeff*__xp.dot(m,v)
-                    alpha0 = alpha1
-                    alpha1 = (-b+(b**2.-3.*a*dd)**0.5)/(3.*a)
+                    alpha0 = float(alpha1)
+                    alpha1 = float((-b+(b**2.-3.*a*dd)**0.5)/(3.*a))
             return {'x':xstep(x0,d,alpha1), 'f':fun(xstep(x0,d,alpha1)), 'alpha':alpha1, 'iterations':sum(iters.values()), 'inner_iterations':iters}
 
 def unimodality(fun,x0,d=None,b=1,threshold=0.01,max_iter=1e3,**kwargs):
