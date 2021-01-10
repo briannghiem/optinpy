@@ -31,6 +31,14 @@ class constrained(object):
             ..fun as callable object; must be a function of x0 and return a single number
             ..x0 as a numeric array; point from which to start
         '''
+        x0 = _xp.array(x0) #ensure proper cast
+        g0 = _xp.array(g0)
+        d0 = _xp.array(d0)
+        Q0 = _xp.array(Q0)
+        A_ = _xp.array(A_)
+        I = _xp.array(I)
+        J = _xp.array(J)
+        K = _xp.array(K)
         #print('### proj grad')
         #print('x0', x0)
         g = _jacobian(fun,x0,**self.params['jacobian'])
@@ -38,7 +46,7 @@ class constrained(object):
             return -g, g, []
         else:
             pass
-        Ak = A_[[i for i in I|K]]
+        Ak = _xp.array(A_[[i for i in I|K]])
         #print('Ak')
         #print(Ak)
         P = _xp.identity(len(x0),_xp.float64)-Ak.T.dot(_xp.linalg.inv(Ak.dot(Ak.T))).dot(Ak)
@@ -123,7 +131,7 @@ class constrained(object):
             raise Exception('A feasible initial point could not be found.')
         else:
             pass
-        I = set(_xp.where([_xp.abs(i)<self.eps for i in res['x'][len(x0):len(x0)+_xp.shape(A)[0]]])[0].tolist())
+        I = set(_xp.where(_xp.array([_xp.abs(i)<self.eps for i in res['x'][len(x0):len(x0)+_xp.shape(A)[0]]]))[0].tolist())
         J = I0^I
         #print A_
         def amax(alpha,x0,d,A_,b,I,J,K):
@@ -161,7 +169,7 @@ class constrained(object):
                 x_vec = [x0]
             else:
                 pass
-            x = x0
+            x = _xp.array(x0)
             #print I, J
             #print '\n'
             iters = 0
@@ -188,7 +196,7 @@ class constrained(object):
                     x_vec += [x]
                 else:
                     pass
-                d, g, _ =self. _con_algorithms[self.params['fmincon']['method']](fun,x,d,g,Q,A_,I,J,K,iters=iters,alpha=alpha)
+                d, g, _ =self._con_algorithms[self.params['fmincon']['method']](fun,x,d,g,Q,A_,I,J,K,iters=iters,alpha=alpha)
                 if len(I|K) > 0:
                     _A = _xp.array([A_[i] for i in I|K],_xp.float64)
                     #print 'lambdas',-_xp.linalg.inv((_A.dot(_A.T))).dot(_A).dot(g)
@@ -217,21 +225,22 @@ class constrained(object):
             ..**kwargs = initial_hessian : as matrix (default = identity)
             .. see unconstrained.params for further details on the methods that are being used
         '''
+        x0 = _xp.array(x0) #ensure proper cast
         if self.params['fminnlcon']['method'] == 'penalty':
-            P = lambda x : _xp.sum([_xp.max([0.,_(x)]) for _  in g])
+            P = lambda x : _xp.sum(_xp.array([_xp.max([0.,_(x)]) for _  in g]))
             f = lambda x : fun(x)+c*P(x)
             chck = lambda x : c*P(x)
         elif self.params['fminnlcon']['method'] == 'log-barrier':
-            B = lambda x : -_xp.sum([_xp.log(-_(x)) for _ in g]) # g(x) <= 0
+            B = lambda x : -_xp.sum(_p=xp.array([_xp.log(-_(x)) for _ in g])) # g(x) <= 0
             f = lambda x : fun(x)+(1./c)*B(x)
             chck = lambda x : (1./c)*B(x)
         elif self.params['fminnlcon']['method'] == 'barrier':
-            B = lambda x : -_xp.sum([1./_(x) for _ in g]) # g(x) <= 0
+            B = lambda x : -_xp.sum(_xp.array([1./_(x) for _ in g])) # g(x) <= 0
             f = lambda x : fun(x)+(1./c)*B(x)
             chck = lambda x : (1./c)*B(x)
         else:
             raise Exception('The fminnlcon method ({}) has not been identified.'.format(self.params['fminnlcon']['method']))
-        x = x0
+        x = _xp.array(x0)
         if vectorized:
             x_vec = [x0]
             c_vec = [c]
