@@ -118,7 +118,7 @@ class constrained(object):
             _ = _xp.shape(A)[0]
             K = set(range(_xp.shape(A)[0],_xp.shape(A)[0]+_xp.shape(Aeq)[0]))
         g = _jacobian(fun,x0,**self.params['jacobian'])
-        res = _so.optimize.linprog(_xp.concatenate((-g,_xp.zeros(_))),A_ub=None,b_ub=None,A_eq=A_lp,b_eq=b_lp,options={'disp':True})
+        res = _so.linprog(_xp.concatenate((-g,_xp.zeros(_))),A_ub=None,b_ub=None,A_eq=A_lp,b_eq=b_lp,options={'disp':True})
         if not res['success']:
             raise Exception('A feasible initial point could not be found.')
         else:
