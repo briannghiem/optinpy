@@ -125,7 +125,14 @@ class unconstrained(object):
         g0 = _xp.array(g0)
         d0 = _xp.array(d0)
         Q0 = _xp.array(Q0)
-        g = _jacobian(fun,x0,**self.params['jacobian'])
+        if kwargs['J'] != None:
+            print("Explicit Computation of Jacobian")
+            g = kwargs['J'](x0)
+            print(str(g))
+        else: #use finite differences
+            print("Finite Difference Estimate of Jacobian")
+            g = _jacobian(fun,x0,**self.params['jacobian'])
+            print(str(g))
         if sum(abs(d0)) < self.eps or ((kwargs['iters'] + 1) % len(x0)) < self.eps:
             Q = _xp.array([self.params['hessian']['initial'] if self.params['hessian']['initial'] else _xp.identity(len(x0))][0])
         else:
@@ -163,7 +170,10 @@ class unconstrained(object):
         '''
         alg = self._ls_algorithms[self.params['linesearch']['method']]
         ls_kwargs = self.params['linesearch']['params'][self.params['linesearch']['method']]
-        d, g, Q = self._unc_algorithms[self.params['fminunc']['method']](fun,x0,_xp.zeros(len(x0)),[],[],iters=0)
+        J=None
+        if 'J' in kwargs:
+            J=kwargs['J']
+        d, g, Q = self._unc_algorithms[self.params['fminunc']['method']](fun,x0,_xp.zeros(len(x0)),[],[],iters=0,J=J)
         if 'max_iter' in kwargs:
             max_iter= kwargs['max_iter']
         else:
