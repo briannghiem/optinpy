@@ -146,9 +146,9 @@ class unconstrained(object):
         d0 = _xp.array(d0)
         Q0 = _xp.array(Q0)
         if self.params['fminunc']['params']['quasi-newton']['hessian_update'] in ('davidon-fletcher-powell','dfp'):
-            return self.dfp(fun,x0,d0,g0,Q0,*args,**kwargs)
+            return self._dfp(fun,x0,d0,g0,Q0,*args,**kwargs)
         elif self.params['fminunc']['params']['quasi-newton']['hessian_update'] in ('broyden-fletcher-goldfarb-shanno','BFGS','bfgs'):
-            return self.bfgs(fun,x0,d0,g0,Q0,*args,**kwargs)
+            return self._bfgs(fun,x0,d0,g0,Q0,*args,**kwargs)
         else:
             raise Exception('Hessian update method ({}) not implemented'.format(self.params['fminunc']['params']['quasi-newton']['hessian_update']))
 
