@@ -8,7 +8,7 @@ eps = __xp.finfo(__xp.float64).eps
 
 def xstep(x0,d,alpha):
     '''
-        returns x_1 given x_0, d and alpha
+        returns x_1 given x_0, d and alpha --> x1 = x0+(alpha*d)
     '''
     return __xp.array(x0,__xp.float64)+alpha*__xp.array(d,__xp.float64)
 
@@ -27,20 +27,30 @@ def backtracking(fun,x0,d=None,alpha=1,rho=0.6,c=1e-4,max_iter=1e3,**kwargs):
         ..d as a numeric array: direction towards which to walk
         ..alpha as a numeric value; maximum step from x_i
         ..rho as a numeric value; rate of decrement in alpha
-        ..c as a numeric values; constant of Wolfe's condition
+        ..c as a numeric values; constant of Wolfe's condition; defaults to Nocedal's example (1e-4)
         ..**kwargs as a dictionary with the jacobian function parameters
     '''
+    print("LS Method: Backtracking")
     d = __xp.array(d) #ensure proper cast
-    if any(d):
-        pass
-        dd = __xp.dot(d,__jacobian(fun,x0,**kwargs))
+    #Compute Jacobian
+    if kwargs['J'] != None:
+        g = kwargs['J'](x0) #use analytic Jacobian
     else:
-        d = -__xp.array(__jacobian(fun,x0,**kwargs),__xp.float64) # steepest descent step
+        g = __jacobian(fun,x0,**kwargs)
+    if any(d): #check if d contains elements other than 0
+        pass
+        dd = __xp.dot(d,g)
+    else: #if d is all zeros
+        d = -__xp.array(g,__xp.float64) # steepest descent step
         dd = __xp.dot(d,-d)
+    #Backtracking linesearch
     iters = 0
     while not __armijo(fun,x0,d,dd,alpha,c) and iters < max_iter:# Armijo's Condition
-        alpha = rho*alpha
+        print("ls iteration: {}".format(iters), end='\r')
+        alpha = rho*alpha #take successively smaller steps along direction d
+        dx=xstep(x0,d,alpha)
         iters += 1
+    print("ls max iter: {}".format(iters))
     return {'x':xstep(x0,d,alpha), 'f':fun(xstep(x0,d,alpha)), 'alpha':alpha, 'iterations':iters}
 
 def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,**kwargs):
@@ -54,18 +64,23 @@ def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,**k
         ..alpha_min; lower limit for alpha when alpha is too small
         ..**kwargs as a dictionary with the jacobian function parameters
     '''
+    print("LS Method: Interp23")
     alpha0 = alpha
     f0 = fun(x0)
-    if any(d):
-        dd = __xp.dot(d,__jacobian(fun,x0,**kwargs))
+    if kwargs['J'] != None:
+        g = kwargs['J'](x0) #use analytic Jacobian
     else:
-        d = -__xp.array(__jacobian(fun,x0,**kwargs),__xp.float64) # steepest descent step
+        g = __jacobian(fun,x0,**kwargs)
+    if any(d):
+        dd = __xp.dot(d,g)
+    else:
+        d = -__xp.array(g,__xp.float64) # steepest descent step
         dd = __xp.dot(d,-d)
     iters = {'first_order':0,'second_order':0,'third_order':0}
     iters['first_order'] += 1
     if __armijo(fun,x0,d,dd,alpha0,c):
         return {'x':xstep(x0,d,alpha0), 'f':fun(xstep(x0,d,alpha0)), 'alpha':alpha0, 'iterations':sum(iters.values()), 'inner_iterations':iters}
-    else:
+    else: #Quadratic Interpolation
         # second order approximation
         iters['second_order'] += 1
         alpha1 = -(dd*alpha0**2)/(2*(fun(xstep(x0,d,alpha0))-f0-dd*alpha0))
@@ -77,7 +92,7 @@ def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,**k
             if __armijo(fun,x0,d,dd,alpha1,c) and alpha1 > alpha_min: # check whether a single backtracking iteration gives rise to a reasonable stepsize
                 return {'x':xstep(x0,d,alpha1), 'f':fun(xstep(x0,d,alpha1)), 'alpha':alpha1,'iterations':sum(iters.values()), 'inner_iterations':iters}
             else:
-                while not __armijo(fun,x0,d,dd,alpha1,c) and iters['third_order'] < max_iter:
+                while not __armijo(fun,x0,d,dd,alpha1,c) and iters['third_order'] < max_iter: #Cubic Interpolation
                     iters['third_order'] += 1
                     coeff = (1/(alpha0**2*alpha1**2*(alpha1-alpha0)))
                     m = __xp.array([[alpha0**2,-alpha1**2],[-alpha0**3,alpha1**3]])
@@ -85,6 +100,7 @@ def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,**k
                     a, b = coeff*__xp.dot(m,v)
                     alpha0 = float(alpha1)
                     alpha1 = float((-b+(b**2.-3.*a*dd)**0.5)/(3.*a))
+            print("ls max iter: {}".format(sum(iters.values())))
             return {'x':xstep(x0,d,alpha1), 'f':fun(xstep(x0,d,alpha1)), 'alpha':alpha1, 'iterations':sum(iters.values()), 'inner_iterations':iters}
 
 def unimodality(fun,x0,d=None,b=1,threshold=0.01,max_iter=1e3,**kwargs):
