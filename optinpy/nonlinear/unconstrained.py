@@ -125,18 +125,30 @@ class unconstrained(object):
         g0 = _xp.array(g0)
         d0 = _xp.array(d0)
         Q0 = _xp.array(Q0)
-        if kwargs['J'] != None:
+        if 'alpha' in kwargs:
+            alpha = kwargs['alpha']
+        else: # only for init
+            alpha = 1
+        if kwargs['J'] != None: #use analytic jacobian
             g = kwargs['J'](x0)
-            print(str(g))
         else: #use finite differences
             g = _jacobian(fun,x0,**self.params['jacobian'])
-        if sum(abs(d0)) < self.eps or ((kwargs['iters'] + 1) % len(x0)) < self.eps:
+        # if sum(abs(d0)) < self.eps or ((kwargs['iters'] + 1) % len(x0)) < self.eps: #if stepsize was effectively zero, or is even iter #
+        if sum(abs(alpha*d0)) < self.eps: #if stepsize was effectively zero
+            #If set Q=Id, then step equivalent to gradient descent
             Q = _xp.array([self.params['hessian']['initial'] if self.params['hessian']['initial'] else _xp.identity(len(x0))][0])
         else:
-            q = (g-g0)[_xp.newaxis].T
-            p = _xp.array((kwargs['alpha']*d0)[_xp.newaxis].T)
+            #Sherman-Morrison formula for estimating inverse Hessian
+            q = (g-g0)[_xp.newaxis].T #finite difference of jac
+            p = _xp.array((alpha*d0)[_xp.newaxis].T) #x step dif
+            print("Jac Finite Dif:{}".format(str(q)))
+            print("X Finite Dif:{}".format(str(p)))
             Q = Q0 + (1.0 + q.T.dot(Q0).dot(q)/(q.T.dot(p)))*(p.dot(p.T))/(p.T.dot(q)) - (p.dot(q.T).dot(Q0)+Q0.dot(q).dot(p.T))/(q.T.dot(p))
-        d = -Q.dot(g)
+        d = -Q.dot(g) #compute direction that solves H*d = -J, where H is hessian, J is Jacobian
+        print("x0:{}".format(str(x0)))
+        print("Jacobian:{}".format(str(g)))
+        print("Inverse Hessian:{}".format(str(Q)))
+        print("Descent direction:{}".format(str(d)))
         return d, g, Q
 
     def _qn(self,fun,x0,d0,g0,Q0,*args,**kwargs):
@@ -166,6 +178,8 @@ class unconstrained(object):
             .. see unconstrained.params for further details on the methods that are being used
         '''
         alg = self._ls_algorithms[self.params['linesearch']['method']]
+        Wolfe = 5e-5 #need to tune backtracking condition; default is 1e-4
+        self.params['linesearch']['params']['backtracking']['c']=Wolfe
         ls_kwargs = self.params['linesearch']['params'][self.params['linesearch']['method']]
         jac=None
         if 'J' in kwargs:
@@ -183,7 +197,8 @@ class unconstrained(object):
         iters = 0
         lsiters = 0
         while _xp.dot(g,g) > threshold and iters < max_iter:
-            ls = alg(fun,x,d,**ls_kwargs)
+            print("fmin iteration: {}".format(iters), end='\r')
+            ls = alg(fun,x,d,**ls_kwargs, J=jac)
             alpha = ls['alpha']
             lsiters += ls['iterations']
             #Q = _hessian(fun,x0,**params['hessian'])
@@ -193,8 +208,9 @@ class unconstrained(object):
                 x_vec += [x]
             else:
                 pass
-            d, g, _ = self._unc_algorithms[self.params['fminunc']['method']](fun,x,d,g,Q,iters=iters,alpha=alpha,J=jac)
+            d, g, Q = self._unc_algorithms[self.params['fminunc']['method']](fun,x,d,g,Q,iters=iters,alpha=alpha,J=jac) #update d, g, Q
             iters += 1
+        print("fmin max iter: {} out of {}".format(iters, max_iter))
         if vectorized:
             return {'x':x_vec, 'f':[fun(x) for x in x_vec], 'iterations':iters, 'ls_iterations':lsiters}#, 'parameters' : params.copy()}
         else:
