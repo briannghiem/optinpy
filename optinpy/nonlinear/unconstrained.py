@@ -23,7 +23,16 @@ class unconstrained(object):
                 'conjugate-gradient':self._conj_gradient,
                 'fletcher-reeves':self._fletcher_reeves,
                 'quasi-newton':self._qn}
-
+        #-----------------------------------------------------------------------
+        #Init params
+        self.d = None; self.g = None; self.Q = None
+        self.x = None; self.x_vec = None
+        self.fun = None; self.jac = None
+        #Linesearch params
+        self.ls = None
+        #Fmin params
+        self.fmin_method = None
+        self.count = 0 #count # loops
 
     def _gradient(self,fun,x0,d0,g0,Q0,*args,**kwargs):
         '''
@@ -121,6 +130,7 @@ class unconstrained(object):
             ..fun as callable object; must be a function of x0 and return a single number
             ..x0 as a numeric array; point from which to start
         '''
+        print("Start BFGS")
         x0 = _xp.array(x0) #ensure proper cast
         g0 = _xp.array(g0)
         d0 = _xp.array(d0)
@@ -137,6 +147,7 @@ class unconstrained(object):
         if sum(abs(alpha*d0)) < self.eps: #if stepsize was effectively zero
             #If set Q=Id, then step equivalent to gradient descent
             Q = _xp.array([self.params['hessian']['initial'] if self.params['hessian']['initial'] else _xp.identity(len(x0))][0])
+            # Q = _xp.array([_xp.identity(len(x0))][0])
         else:
             #Sherman-Morrison formula for estimating inverse Hessian
             q = (g-g0)[_xp.newaxis].T #finite difference of jac
@@ -168,6 +179,21 @@ class unconstrained(object):
         else:
             raise Exception('Hessian update method ({}) not implemented'.format(self.params['fminunc']['params']['quasi-newton']['hessian_update']))
 
+    def _update(self, vectorized):
+        ls_alg = self._ls_algorithms[self.params['linesearch']['method']]
+        ls_kwargs = self.params['linesearch']['params'][self.params['linesearch']['method']]
+        self.ls = ls_alg(self.fun,self.x,self.d,**ls_kwargs, J=self.jac)
+        alpha = self.ls['alpha']
+        lsiters += self.ls['iterations']
+        #
+        self.x = self._xstep(self.x,self.d,alpha)
+        if vectorized:
+            self.x_vec += [self.x]
+        else:
+            pass
+        self.d, self.g, self.Q = self.fmin_method(self.fun,self.x,self.d,self.g,self.Q, \
+                                                  iters=iters,alpha=alpha,J=self.jac) #update d, g, Q
+
     def fminunc(self,fun,x0,threshold=1e-6,vectorized=False,**kwargs):
         '''
             Minimum Unconstrained Optimization
@@ -177,41 +203,38 @@ class unconstrained(object):
             ..**kwargs = initial_hessian : as matrix (default = identity)
             .. see unconstrained.params for further details on the methods that are being used
         '''
-        alg = self._ls_algorithms[self.params['linesearch']['method']]
-        Wolfe = 5e-5 #need to tune backtracking condition; default is 1e-4
-        self.params['linesearch']['params']['backtracking']['c']=Wolfe
-        ls_kwargs = self.params['linesearch']['params'][self.params['linesearch']['method']]
-        jac=None
-        if 'J' in kwargs:
-            jac=kwargs['J']
-        d, g, Q = self._unc_algorithms[self.params['fminunc']['method']](fun,x0,_xp.zeros(len(x0)),[],[],iters=0,J=jac)
+        #-----------------------------------------------------------------------
+        #Set up minimization parameters
+        self.fun = fun
+        if 'J' in kwargs: #use analytic Jacobian
+            self.jac=kwargs['J']
         if 'max_iter' in kwargs:
             max_iter= kwargs['max_iter']
         else:
             max_iter = self.params['fminunc']['params'][self.params['fminunc']['method']]['max_iter']
-        if vectorized:
-            x_vec = [x0]
-        else:
-            pass
-        x = _xp.array(x0)
-        iters = 0
-        lsiters = 0
-        while _xp.dot(g,g) > threshold and iters < max_iter:
-            print("fmin iteration: {}".format(iters), end='\r')
-            ls = alg(fun,x,d,**ls_kwargs, J=jac)
-            alpha = ls['alpha']
-            lsiters += ls['iterations']
-            #Q = _hessian(fun,x0,**params['hessian'])
-            #alpha = g.T.dot(g)/(g.T.dot(Q).dot(g))
-            x = _xstep(x,d,alpha)
+        #-----------------------------------------------------------------------
+        #Minimization
+        if self.count == 0:
+            ##Initial Gradient Descent step
+            print("Initial GD step")
+            self.fmin_method = self._unc_algorithms[self.params['fminunc']['method']]
+            self.d, self.g, self.Q = self.fmin_method(self.fun,x0,_xp.zeros(len(x0)),\
+                                                      [],[],iters=0,J=self.jac)
             if vectorized:
-                x_vec += [x]
+                self.x_vec = [x0]
             else:
                 pass
-            d, g, Q = self._unc_algorithms[self.params['fminunc']['method']](fun,x,d,g,Q,iters=iters,alpha=alpha,J=jac) #update d, g, Q
+        ##Loop
+        self.x = _xp.array(x0)
+        iters = 0
+        lsiters = 0
+        while _xp.dot(self.g,self.g) > threshold and iters < max_iter:
+            print("fmin iteration: {}".format(iters), end='\r')
+            self._update(vectorized)
             iters += 1
         print("fmin max iter: {} out of {}".format(iters, max_iter))
+        self.count += 1
         if vectorized:
-            return {'x':x_vec, 'f':[fun(x) for x in x_vec], 'iterations':iters, 'ls_iterations':lsiters}#, 'parameters' : params.copy()}
+            return {'x':self.x_vec, 'f':[self.fun(x) for x in self.x_vec], 'iterations':iters, 'ls_iterations':lsiters}#, 'parameters' : params.copy()}
         else:
-            return {'x':x, 'f':fun(x), 'iterations':iters, 'ls_iterations':lsiters}#, 'parameters' : params.copy()}
+            return {'x':self.x, 'f':self.fun(self.x), 'iterations':iters, 'ls_iterations':lsiters}#, 'parameters' : params.copy()}
