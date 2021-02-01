@@ -25,10 +25,10 @@ def jacobian(fun,x0,epsilon=__xp.sqrt(eps),algorithm='central'):
     for i in range(len(x0)):
         fvals = []
         for _x in evpoints:
-            x0[i] += _x*epsilon
-            fvals += [fun(x0)]
-            x0[i] -= _x*epsilon
-        grad += [(fvals[1]-fvals[0])/((evpoints[1]-evpoints[0])*epsilon)]
+            x0[i] = x0[i]+_x*epsilon
+            fvals = fvals+[fun(x0)]
+            x0[i] = x0[i]-_x*epsilon
+        grad = grad+[(fvals[1]-fvals[0])/((evpoints[1]-evpoints[0])*epsilon)]
     return __xp.array(grad,__xp.float64).copy()
 
 def hessian(fun,x0,epsilon=__xp.sqrt(eps),algorithm='central',**kwargs):
@@ -66,20 +66,20 @@ def hessian(fun,x0,epsilon=__xp.sqrt(eps),algorithm='central',**kwargs):
     for i in range(0,len(x0)):
         fvals = []
         for points in evpoints_ii:
-            x0[i] += points[0]*epsilon
-            x0[i] += points[1]*epsilon
-            fvals += [fun(x0)]
-            x0[i] -= points[0]*epsilon
-            x0[i] -= points[1]*epsilon
+            x0[i] = x0[i]+points[0]*epsilon
+            x0[i] = x0[i]+points[1]*epsilon
+            fvals = fvals+[fun(x0)]
+            x0[i] = x0[i]-points[0]*epsilon
+            x0[i] = x0[i]-points[1]*epsilon
         hessian[i][i] = sum([fvals[k]*coeffs_ii[k] for k in range(len(fvals))])/denom_ii
         for j in range(i+1,len(x0)):
             fvals = []
             for points in evpoints_ij:
-                x0[i] += points[0]*epsilon
-                x0[j] += points[1]*epsilon
-                fvals += [fun(x0)]
-                x0[i] -= points[0]*epsilon
-                x0[j] -= points[1]*epsilon
+                x0[i] = x0[i]+points[0]*epsilon
+                x0[j] = x0[j]+points[1]*epsilon
+                fvals = fvals+[fun(x0)]
+                x0[i] = x0[i]-points[0]*epsilon
+                x0[j] = x0[j]-points[1]*epsilon
             hessian[i][j] = sum([fvals[k]*coeffs_ij[k] for k in range(len(fvals))])/denom_ij
             hessian[j][i] = hessian[i][j]
     return __xp.array(hessian)
