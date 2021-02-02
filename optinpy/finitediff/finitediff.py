@@ -13,6 +13,7 @@ def jacobian(fun,x0,epsilon=__xp.sqrt(eps),algorithm='central'):
         ..espilon as a numeric value; perturbation from which the jacobian is estimated
         ..algorithm as a string among 'central', 'forward', 'backward'; algorithm to be used to estimate the jacobian
     '''
+    print("Computing Finite Difference")
     grad = []
     if algorithm == 'central':
         evpoints = [-1,1]
@@ -29,6 +30,10 @@ def jacobian(fun,x0,epsilon=__xp.sqrt(eps),algorithm='central'):
             fvals = fvals+[fun(x0)]
             x0[i] = x0[i]-_x*epsilon
         grad = grad+[(fvals[1]-fvals[0])/((evpoints[1]-evpoints[0])*epsilon)]
+        # print(str(fvals))
+        # print(str(evpoints))
+        # print(str(epsilon))
+        # print(str(grad))
     return __xp.array(grad,__xp.float64).copy()
 
 def hessian(fun,x0,epsilon=__xp.sqrt(eps),algorithm='central',**kwargs):
