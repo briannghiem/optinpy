@@ -17,9 +17,12 @@ def __armijo(fun,x0,d,dd,alpha,c):
         Check's whether Armijo's conditions upholds
         i.e. fun(x0+alpha*d) <= fun(x0) + c*alpha*dd
     '''
+    # print("f(x_new):{}".format(str(fun(xstep(x0,d,alpha)))))
+    # print("f(x)+x_new:{}".format(str(fun(x0)+c*alpha*dd)))
+    # print("dx:{}".format(str(c*alpha*dd)))
     return fun(xstep(x0,d,alpha)) <= fun(x0)+c*alpha*dd
 
-def backtracking(fun,x0,d=None,alpha=1,rho=0.6,c=1e-4,max_iter=1e3,**kwargs):
+def backtracking(fun,x0,d=None,alpha=1,rho=0.6,c=1e-4,max_iter=1e3,J=None,**kwargs):
     '''
         backtracking algorithm, arg_min(alpha) fun(x0+alpha*d)
         ..fun as callable object; must be a function of x0 and return a single number
@@ -33,7 +36,7 @@ def backtracking(fun,x0,d=None,alpha=1,rho=0.6,c=1e-4,max_iter=1e3,**kwargs):
     print("LS Method: Backtracking")
     d = __xp.array(d) #ensure proper cast
     #Compute Jacobian
-    if kwargs['J'] != None:
+    if J != None:
         g = kwargs['J'](x0) #use analytic Jacobian
     else:
         g = __jacobian(fun,x0,**kwargs)
@@ -45,15 +48,17 @@ def backtracking(fun,x0,d=None,alpha=1,rho=0.6,c=1e-4,max_iter=1e3,**kwargs):
         dd = __xp.dot(d,-d)
     #Backtracking linesearch
     iters = 0
+    print('dd:{}'.format(str(dd)))
     while not __armijo(fun,x0,d,dd,alpha,c) and iters < max_iter:# Armijo's Condition
         print("ls iteration: {}".format(iters), end='\r')
         alpha = rho*alpha #take successively smaller steps along direction d
         dx=xstep(x0,d,alpha)
         iters += 1
+    print("dx:{}".format(str(c*alpha*dd)))
     print("ls max iter: {}".format(iters))
     return {'x':xstep(x0,d,alpha), 'f':fun(xstep(x0,d,alpha)), 'alpha':alpha, 'iterations':iters}
 
-def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,**kwargs):
+def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,J=None,**kwargs):
     '''
         interpolating algorithm, arg_min(alpha) fun(x0+alpha*d)
         ..fun as callable object; must be a function of x0 and return a single number
@@ -67,7 +72,7 @@ def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,**k
     print("LS Method: Interp23")
     alpha0 = alpha
     f0 = fun(x0)
-    if kwargs['J'] != None:
+    if J != None:
         g = kwargs['J'](x0) #use analytic Jacobian
     else:
         g = __jacobian(fun,x0,**kwargs)
@@ -79,17 +84,26 @@ def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,**k
     iters = {'first_order':0,'second_order':0,'third_order':0}
     iters['first_order'] += 1
     if __armijo(fun,x0,d,dd,alpha0,c):
+        print("First-order")
+        print("new loss:{}".format(fun(xstep(x0,d,alpha0))))
+        print("Armijo:{}".format(fun(x0)+c*alpha0*dd))
         return {'x':xstep(x0,d,alpha0), 'f':fun(xstep(x0,d,alpha0)), 'alpha':alpha0, 'iterations':sum(iters.values()), 'inner_iterations':iters}
     else: #Quadratic Interpolation
         # second order approximation
         iters['second_order'] += 1
         alpha1 = -(dd*alpha0**2)/(2*(fun(xstep(x0,d,alpha0))-f0-dd*alpha0))
         if __armijo(fun,x0,d,dd,alpha1,c) and alpha1 > alpha_min:# Armijo's Condition
+            print("Second-order")
+            print("new loss:{}".format(fun(xstep(x0,d,alpha1))))
+            print("Armijo:{}".format(fun(x0)+c*alpha1*dd))
             return {'x':xstep(x0,d,alpha1), 'f':fun(xstep(x0,d,alpha1)), 'alpha':alpha1, 'iterations':sum(iters.values()), 'inner_iterations':iters}
         else:
             alpha1 = alpha0*rho
             iters['second_order'] += 1
             if __armijo(fun,x0,d,dd,alpha1,c) and alpha1 > alpha_min: # check whether a single backtracking iteration gives rise to a reasonable stepsize
+                print("Second-order")
+                print("new loss:{}".format(fun(xstep(x0,d,alpha1))))
+                print("Armijo:{}".format(fun(x0)+c*alpha1*dd))
                 return {'x':xstep(x0,d,alpha1), 'f':fun(xstep(x0,d,alpha1)), 'alpha':alpha1,'iterations':sum(iters.values()), 'inner_iterations':iters}
             else:
                 while not __armijo(fun,x0,d,dd,alpha1,c) and iters['third_order'] < max_iter: #Cubic Interpolation
@@ -101,6 +115,8 @@ def interp23(fun,x0,d=None,alpha=1,c=1e-4,alpha_min=0.1,rho=0.5,max_iter=1e3,**k
                     alpha0 = float(alpha1)
                     alpha1 = float((-b+(b**2.-3.*a*dd)**0.5)/(3.*a))
             print("ls max iter: {}".format(sum(iters.values())))
+            print("new loss:{}".format(fun(xstep(x0,d,alpha1))))
+            print("Armijo:{}".format(fun(x0)+c*alpha1*dd))
             return {'x':xstep(x0,d,alpha1), 'f':fun(xstep(x0,d,alpha1)), 'alpha':alpha1, 'iterations':sum(iters.values()), 'inner_iterations':iters}
 
 def unimodality(fun,x0,d=None,b=1,threshold=0.01,max_iter=1e3,**kwargs):
