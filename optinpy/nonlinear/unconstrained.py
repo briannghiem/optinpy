@@ -157,6 +157,7 @@ class unconstrained(object):
             Q = Q0 + (1.0 + q.T.dot(Q0).dot(q)/(q.T.dot(p)))*(p.dot(p.T))/(p.T.dot(q)) - (p.dot(q.T).dot(Q0)+Q0.dot(q).dot(p.T))/(q.T.dot(p))
         d = -Q.dot(g) #compute direction that solves H*d = -J, where H is hessian, J is Jacobian
         print("x0:{}".format(str(x0)))
+        print("Loss:{}".format(str(fun(x0))))
         print("Jacobian:{}".format(str(g)))
         print("Inverse Hessian:{}".format(str(Q)))
         print("Descent direction:{}".format(str(d)))
@@ -179,14 +180,14 @@ class unconstrained(object):
         else:
             raise Exception('Hessian update method ({}) not implemented'.format(self.params['fminunc']['params']['quasi-newton']['hessian_update']))
 
-    def _update(self, vectorized):
+    def _update(self, vectorized, iters):
         ls_alg = self._ls_algorithms[self.params['linesearch']['method']]
         ls_kwargs = self.params['linesearch']['params'][self.params['linesearch']['method']]
-        self.ls = ls_alg(self.fun,self.x,self.d,**ls_kwargs, J=self.jac)
+        self.ls = ls_alg(self.fun,self.x,self.d,J=self.jac,**ls_kwargs)
         alpha = self.ls['alpha']
-        lsiters += self.ls['iterations']
         #
-        self.x = self._xstep(self.x,self.d,alpha)
+        print("Update D")
+        self.x = _xstep(self.x,self.d,alpha)
         if vectorized:
             self.x_vec += [self.x]
         else:
@@ -228,13 +229,16 @@ class unconstrained(object):
         self.x = _xp.array(x0)
         iters = 0
         lsiters = 0
-        while _xp.dot(self.g,self.g) > threshold and iters < max_iter:
+        # while _xp.dot(self.g,self.g) > threshold and iters < max_iter:
+        while iters < max_iter:
             print("fmin iteration: {}".format(iters), end='\r')
-            self._update(vectorized)
+            self._update(vectorized, iters)
             iters += 1
+            lsiters += self.ls['iterations']
         print("fmin max iter: {} out of {}".format(iters, max_iter))
         self.count += 1
         if vectorized:
             return {'x':self.x_vec, 'f':[self.fun(x) for x in self.x_vec], 'iterations':iters, 'ls_iterations':lsiters}#, 'parameters' : params.copy()}
         else:
+            print("D_update:{}".format(str(self.x)))
             return {'x':self.x, 'f':self.fun(self.x), 'iterations':iters, 'ls_iterations':lsiters}#, 'parameters' : params.copy()}
