@@ -24,15 +24,18 @@ class unconstrained(object):
                 'fletcher-reeves':self._fletcher_reeves,
                 'quasi-newton':self._qn}
         #-----------------------------------------------------------------------
-        #Init params
+        #Init params to be updated
         self.d = None; self.g = None; self.Q = None
         self.x = None; self.x_vec = None
-        self.fun = None; self.jac = None
-        #Linesearch params
-        self.ls = None
-        #Fmin params
-        self.fmin_method = None
+        self.n = None # shot
         self.count = 0 #count # loops
+        #-----------------------------------------------------------------------
+        #Opt functions; these will remain unchanged after init
+        self.max_iter = None
+        self.fun = None; self.jac = None
+        self.ls = None #liniesearch method
+        self.fmin_method = None #fmin method
+
 
     def _gradient(self,fun,x0,d0,g0,Q0,*args,**kwargs):
         '''
@@ -183,19 +186,23 @@ class unconstrained(object):
     def _update(self, vectorized, iters):
         ls_alg = self._ls_algorithms[self.params['linesearch']['method']]
         ls_kwargs = self.params['linesearch']['params'][self.params['linesearch']['method']]
-        self.ls = ls_alg(self.fun,self.x,self.d,J=self.jac,**ls_kwargs)
+        xn = self.x[self.n,:]; dn = self.d[self.n,:]
+        self.ls = ls_alg(self.fun,xn,dn,J=self.jac,**ls_kwargs)
         alpha = self.ls['alpha']
         #
         print("Update D")
-        self.x = _xstep(self.x,self.d,alpha)
+        xn_new = _xstep(xn,dn,alpha)
+        self.x[self.n,:]=xn_new
         if vectorized:
             self.x_vec += [self.x]
         else:
             pass
-        self.d, self.g, self.Q = self.fmin_method(self.fun,self.x,self.d,self.g,self.Q, \
-                                                  iters=iters,alpha=alpha,J=self.jac) #update d, g, Q
 
-    def fminunc(self,fun,x0,threshold=1e-6,vectorized=False,**kwargs):
+        dn_new, gn_new, Qn_new = self.fmin_method(self.fun,xn_new,dn,self.g[self.n,:],self.Q[self.n,...], \
+                                                  iters=iters,alpha=alpha,J=self.jac) #update d, g, Q
+        self.d[self.n, :]=dn_new; self.g[self.n, :]=gn_new; self.Q[self.n,...]=Qn_new
+
+    def fminunc(self,fun,x0,n,threshold=1e-6,vectorized=False,**kwargs):
         '''
             Minimum Unconstrained Optimization
             ..fun as callable object; must be a function of x0 and return a single number
@@ -206,39 +213,48 @@ class unconstrained(object):
         '''
         #-----------------------------------------------------------------------
         #Set up minimization parameters
-        self.fun = fun
-        if 'J' in kwargs: #use analytic Jacobian
-            self.jac=kwargs['J']
-        if 'max_iter' in kwargs:
-            max_iter= kwargs['max_iter']
-        else:
-            max_iter = self.params['fminunc']['params'][self.params['fminunc']['method']]['max_iter']
+        if self.count == 0:
+            ns = x0.shape[0] # #shots
+            nparams = x0.shape[1] # #params to be estimated per shot
+            self.d = _xp.zeros((ns, nparams)); self.g = _xp.zeros((ns, nparams))
+            self.Q = _xp.zeros((ns, nparams, nparams))
+            self.x = _xp.zeros((ns, nparams))
+            self.fun = fun
+            self.fmin_method = self._unc_algorithms[self.params['fminunc']['method']]
+            if 'J' in kwargs: #use analytic Jacobian
+                self.jac=kwargs['J']
+            if 'max_iter' in kwargs:
+                self.max_iter= kwargs['max_iter']
+            else:
+                self.max_iter = self.params['fminunc']['params'][self.params['fminunc']['method']]['max_iter']
         #-----------------------------------------------------------------------
         #Minimization
-        if self.count == 0:
+        self.n = n #update shot number
+        xn = x0[self.n,:]
+        if self.count < x0.shape[1]: #first pass through all shots
             ##Initial Gradient Descent step
             print("Initial GD step")
-            self.fmin_method = self._unc_algorithms[self.params['fminunc']['method']]
-            self.d, self.g, self.Q = self.fmin_method(self.fun,x0,_xp.zeros(len(x0)),\
-                                                      [],[],iters=0,J=self.jac)
+            dn, gn, Qn = self.fmin_method(self.fun,xn,_xp.zeros(len(xn)),\
+                                          [],[],iters=0,J=self.jac)
+            self.d[n, :]=dn; self.g[n, :]=gn; self.Q[n, ...]=Qn
             if vectorized:
                 self.x_vec = [x0]
             else:
                 pass
         ##Loop
-        self.x = _xp.array(x0)
+        self.x[self.n,:] = _xp.array(xn)
         iters = 0
         lsiters = 0
         # while _xp.dot(self.g,self.g) > threshold and iters < max_iter:
-        while iters < max_iter:
+        while iters < self.max_iter:
             print("fmin iteration: {}".format(iters), end='\r')
             self._update(vectorized, iters)
             iters += 1
             lsiters += self.ls['iterations']
-        print("fmin max iter: {} out of {}".format(iters, max_iter))
+        print("fmin max iter: {} out of {}".format(iters, self.max_iter))
         self.count += 1
         if vectorized:
             return {'x':self.x_vec, 'f':[self.fun(x) for x in self.x_vec], 'iterations':iters, 'ls_iterations':lsiters}#, 'parameters' : params.copy()}
         else:
             print("D_update:{}".format(str(self.x)))
-            return {'x':self.x, 'f':self.fun(self.x), 'iterations':iters, 'ls_iterations':lsiters}#, 'parameters' : params.copy()}
+            return {'x':self.x[self.n,:], 'f':self.fun(self.x[self.n,:]), 'iterations':iters, 'ls_iterations':lsiters}#, 'parameters' : params.copy()}
