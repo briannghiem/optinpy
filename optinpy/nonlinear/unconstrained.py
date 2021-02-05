@@ -232,7 +232,7 @@ class unconstrained(object):
         #Minimization
         self.n = n #update shot number
         xn = x0[self.n,:]
-        if self.count < x0.shape[1]: #first pass through all shots
+        if self.count < x0.shape[0]: #first pass through all shots
             ##Initial Gradient Descent step
             print("Initial GD step")
             dn, gn, Qn = self.fmin_method(self.fun,xn,_xp.zeros(len(xn)),\
@@ -247,7 +247,8 @@ class unconstrained(object):
         gn = self.g[self.n,:]
         iters = 0
         lsiters = 0
-        while _xp.dot(gn,gn) > threshold and iters < self.max_iter:
+        print("Current g:{}".format(str(gn)))
+        while _xp.dot(gn,gn) > threshold and iters < self.max_iter and self.fun(xn) > self.eps:
             print("fmin iteration: {}".format(iters), end='\r')
             self._update(vectorized, iters)
             iters += 1
