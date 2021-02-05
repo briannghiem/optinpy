@@ -146,15 +146,16 @@ class unconstrained(object):
             g = kwargs['J'](x0)
         else: #use finite differences
             g = _jacobian(fun,x0,**self.params['jacobian'])
-        # if sum(abs(d0)) < self.eps or ((kwargs['iters'] + 1) % len(x0)) < self.eps: #if stepsize was effectively zero, or is even iter #
-        if sum(abs(alpha*d0)) < self.eps: #if stepsize was effectively zero
+        q = (g-g0)[_xp.newaxis].T #finite difference of jac
+        p = _xp.array((alpha*d0)[_xp.newaxis].T) #x step dif
+        if _xp.sum(_xp.abs(q)) < self.eps or _xp.sum(_xp.abs(p)) < self.eps: #if stepsize was effectively zero
             #If set Q=Id, then step equivalent to gradient descent
             Q = _xp.array([self.params['hessian']['initial'] if self.params['hessian']['initial'] else _xp.identity(len(x0))][0])
             # Q = _xp.array([_xp.identity(len(x0))][0])
         else:
             #Sherman-Morrison formula for estimating inverse Hessian
-            q = (g-g0)[_xp.newaxis].T #finite difference of jac
-            p = _xp.array((alpha*d0)[_xp.newaxis].T) #x step dif
+            # q = (g-g0)[_xp.newaxis].T #finite difference of jac
+            # p = _xp.array((alpha*d0)[_xp.newaxis].T) #x step dif
             print("Jac Finite Dif:{}".format(str(q)))
             print("X Finite Dif:{}".format(str(p)))
             Q = Q0 + (1.0 + q.T.dot(Q0).dot(q)/(q.T.dot(p)))*(p.dot(p.T))/(p.T.dot(q)) - (p.dot(q.T).dot(Q0)+Q0.dot(q).dot(p.T))/(q.T.dot(p))
@@ -235,7 +236,7 @@ class unconstrained(object):
             ##Initial Gradient Descent step
             print("Initial GD step")
             dn, gn, Qn = self.fmin_method(self.fun,xn,_xp.zeros(len(xn)),\
-                                          [],[],iters=0,J=self.jac)
+                                          _xp.zeros(len(xn)),[],iters=0,J=self.jac)
             self.d[n, :]=dn; self.g[n, :]=gn; self.Q[n, ...]=Qn
             if vectorized:
                 self.x_vec = [x0]
@@ -243,10 +244,10 @@ class unconstrained(object):
                 pass
         ##Loop
         self.x[self.n,:] = _xp.array(xn)
+        gn = self.g[self.n,:]
         iters = 0
         lsiters = 0
-        # while _xp.dot(self.g,self.g) > threshold and iters < max_iter:
-        while iters < self.max_iter:
+        while _xp.dot(gn,gn) > threshold and iters < self.max_iter:
             print("fmin iteration: {}".format(iters), end='\r')
             self._update(vectorized, iters)
             iters += 1
