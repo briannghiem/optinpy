@@ -148,18 +148,17 @@ class unconstrained(object):
             g = _jacobian(fun,x0,**self.params['jacobian'])
         q = (g-g0)[_xp.newaxis].T #finite difference of jac
         p = _xp.array((alpha*d0)[_xp.newaxis].T) #x step dif
-        if _xp.sum(_xp.abs(q)) < self.eps or _xp.sum(_xp.abs(p)) < self.eps: #if stepsize was effectively zero
+        dp_tol = 5e-2 #depends on use case
+        if _xp.sum(_xp.abs(q)) < self.eps or _xp.sum(_xp.abs(p)) < dp_tol or ((kwargs['iters'] + 1) % len(x0)) < self.eps: #if stepsize was too small
             #If set Q=Id, then step equivalent to gradient descent
             Q = _xp.array([self.params['hessian']['initial'] if self.params['hessian']['initial'] else _xp.identity(len(x0))][0])
-            # Q = _xp.array([_xp.identity(len(x0))][0])
         else:
             #Sherman-Morrison formula for estimating inverse Hessian
-            # q = (g-g0)[_xp.newaxis].T #finite difference of jac
-            # p = _xp.array((alpha*d0)[_xp.newaxis].T) #x step dif
-            print("Jac Finite Dif:{}".format(str(q)))
-            print("X Finite Dif:{}".format(str(p)))
             Q = Q0 + (1.0 + q.T.dot(Q0).dot(q)/(q.T.dot(p)))*(p.dot(p.T))/(p.T.dot(q)) - (p.dot(q.T).dot(Q0)+Q0.dot(q).dot(p.T))/(q.T.dot(p))
         d = -Q.dot(g) #compute direction that solves H*d = -J, where H is hessian, J is Jacobian
+        d = d / (_xp.sum(_xp.abs(d)**2))**0.5 #normalize direction vector
+        print("Jac Finite Dif:{}".format(str(q)))
+        print("X Finite Dif:{}".format(str(p)))
         print("x0:{}".format(str(x0)))
         print("Loss:{}".format(str(fun(x0))))
         print("Jacobian:{}".format(str(g)))
