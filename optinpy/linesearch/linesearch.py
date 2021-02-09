@@ -17,9 +17,6 @@ def __armijo(fun,x0,d,dd,alpha,c):
         Check's whether Armijo's conditions upholds
         i.e. fun(x0+alpha*d) <= fun(x0) + c*alpha*dd
     '''
-    # print("f(x_new):{}".format(str(fun(xstep(x0,d,alpha)))))
-    # print("f(x)+x_new:{}".format(str(fun(x0)+c*alpha*dd)))
-    # print("dx:{}".format(str(c*alpha*dd)))
     return fun(xstep(x0,d,alpha)) <= fun(x0)+c*alpha*dd
 
 def backtracking(fun,x0,d=None,alpha=1,rho=0.6,c=1e-4,max_iter=1e3,J=None,**kwargs):
@@ -48,8 +45,10 @@ def backtracking(fun,x0,d=None,alpha=1,rho=0.6,c=1e-4,max_iter=1e3,J=None,**kwar
         dd = __xp.dot(d,-d)
     #Backtracking linesearch
     iters = 0
+    dx = __xp.inf #init
+    dx_tol = 1e-4
     print('dd:{}'.format(str(dd)))
-    while not __armijo(fun,x0,d,dd,alpha,c) and iters < max_iter:# Armijo's Condition
+    while not __armijo(fun,x0,d,dd,alpha,c) and iters < max_iter and __xp.sum(__xp.abs(dx))>dx_tol:# Armijo's Condition
         print("ls iteration: {}".format(iters), end='\r')
         alpha = rho*alpha #take successively smaller steps along direction d
         dx=xstep(x0,d,alpha)
